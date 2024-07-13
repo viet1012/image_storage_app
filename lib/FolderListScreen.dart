@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'Common/Common.dart';
 import 'Common/CustomAppBar.dart';
 import 'FolderContentScreen.dart';
 
@@ -39,6 +40,7 @@ class _FolderListScreenState extends State<FolderListScreen> {
   Future<void> _createFolder(String folderName, String password) async {
     final directory = await getApplicationDocumentsDirectory();
     final folderDir = Directory('${directory.path}/image_storage/$folderName');
+    print("folderDir: ${folderDir.path}");
     if (!await folderDir.exists()) {
       await folderDir.create(recursive: true);
     }
@@ -58,13 +60,17 @@ class _FolderListScreenState extends State<FolderListScreen> {
 
   Future<void> _checkPassword(String folderName) async {
     final password = await _getPassword(folderName);
+    print("password: ${password}");
     if (password != null) {
       final enteredPassword = await _displayPasswordDialog();
+      if (enteredPassword == null) {
+        return;
+      }
       if (enteredPassword == password) {
         _navigateToFolderContent(folderName);
       } else {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Incorrect password')));
+            .showSnackBar(const SnackBar(content: Text('Incorrect password')));
       }
     } else {
       _navigateToFolderContent(folderName);
@@ -77,24 +83,24 @@ class _FolderListScreenState extends State<FolderListScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Enter Password'),
+          title: const Text('Enter Password'),
           content: TextField(
             controller: _controller,
             obscureText: true,
-            decoration: InputDecoration(hintText: 'Password'),
+            decoration: const InputDecoration(hintText: 'Password'),
           ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: Text('Cancel'),
+              child: const Text('Cancel'),
             ),
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop(_controller.text);
               },
-              child: Text('OK'),
+              child: const Text('OK'),
             ),
           ],
         );
@@ -174,7 +180,11 @@ class _FolderListScreenState extends State<FolderListScreen> {
                     color: Colors.white,
                   ),
                   onPressed: () async {
-                    final confirm = await _displayDeleteConfirmationDialog();
+                    final confirm = await Dialogs.showDeleteConfirmationDialog(
+                        context,
+                        'Delete Folder',
+                        'Are you sure you want to delete this folder?');
+
                     if (confirm == true) {
                       _deleteFolder(folderName);
                     }
@@ -209,7 +219,6 @@ class _FolderListScreenState extends State<FolderListScreen> {
             'Create Folder',
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              color: Colors.black,
               fontSize: 22,
             ),
           ),
@@ -218,39 +227,19 @@ class _FolderListScreenState extends State<FolderListScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'Folder Name',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-                const SizedBox(height: 8),
                 TextField(
                   controller: _folderNameController,
-                  decoration: InputDecoration(
-                    hintText: 'Enter folder name',
-                    border: const OutlineInputBorder(),
-                    filled: true,
-                    fillColor: Colors.grey.shade100,
+                  decoration: const InputDecoration(
+                    labelText: 'Folder Name',
+                    border: OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'Password',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-                const SizedBox(height: 8),
                 TextField(
                   controller: _passwordController,
-                  decoration: InputDecoration(
-                    hintText: 'Enter password (optional)',
+                  decoration: const InputDecoration(
+                    labelText: 'Password (optional)',
                     border: OutlineInputBorder(),
-                    filled: true,
-                    fillColor: Colors.grey.shade100,
                   ),
                   obscureText: true,
                 ),
@@ -270,7 +259,7 @@ class _FolderListScreenState extends State<FolderListScreen> {
                 ),
               ),
             ),
-            TextButton(
+            ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop([
                   _folderNameController.text,
@@ -284,32 +273,6 @@ class _FolderListScreenState extends State<FolderListScreen> {
                   fontSize: 18,
                 ),
               ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<bool?> _displayDeleteConfirmationDialog() async {
-    return showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Delete Folder'),
-          content: Text('Are you sure you want to delete this folder?'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(false);
-              },
-              child: Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(true);
-              },
-              child: Text('Delete'),
             ),
           ],
         );
