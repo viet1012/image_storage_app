@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'CustomElevatedButton.dart';
+
 class Dialogs {
   static Future<bool?> showDeleteConfirmationDialog(
       BuildContext context, String title, String content) async {
@@ -21,28 +23,16 @@ class Dialogs {
             ),
           ),
           actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(false);
-              },
-              child: const Text(
-                'No',
-                style: TextStyle(
-                  fontSize: 20,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(true);
-              },
-              child: const Text(
-                'Yes',
-                style: TextStyle(
-                  fontSize: 20,
-                ),
-              ),
-            ),
+            CustomElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop(false);
+                },
+                text: 'No'),
+            CustomElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop(true);
+                },
+                text: 'Yes'),
           ],
         );
       },

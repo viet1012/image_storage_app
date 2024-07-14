@@ -51,7 +51,8 @@ dev_dependencies:
   video_player: ^2.2.16
   shared_preferences: ^2.0.13
   flutter_launcher_icons: "^0.9.0"
-
+  multiple_images_picker: ^1.0.1
+  flutter_colorpicker: ^1.0.3
 flutter_icons:
   image_path: "assets/images/iconV.jpg"
   android: true

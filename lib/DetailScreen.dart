@@ -8,6 +8,7 @@ import 'Common/CustomAppBar.dart';
 class DetailScreen extends StatefulWidget {
   final String mediaPath;
   final bool isVideo;
+
   DetailScreen({required this.mediaPath, required this.isVideo});
 
   @override
@@ -89,9 +90,15 @@ class _DetailScreenState extends State<DetailScreen> {
                         }
                       },
                     )
-                  : Image.file(
-                      File(widget.mediaPath),
-                      fit: BoxFit.cover,
+                  : InteractiveViewer(
+                      panEnabled: true,
+                      boundaryMargin: EdgeInsets.all(8),
+                      minScale: 0.5,
+                      maxScale: 3.0,
+                      child: Image.file(
+                        File(widget.mediaPath),
+                        fit: BoxFit.cover,
+                      ),
                     ),
             ),
           );

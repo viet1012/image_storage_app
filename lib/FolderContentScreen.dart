@@ -5,8 +5,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 
 import 'Common/Common.dart';
-import 'Common/CustomAppBar.dart';
 import 'DetailScreen.dart';
+
+enum SortOption { name, date, size }
 
 class FolderContentScreen extends StatefulWidget {
   final String folderPath;
@@ -18,6 +19,7 @@ class FolderContentScreen extends StatefulWidget {
 
 class _FolderContentScreenState extends State<FolderContentScreen> {
   List<FileSystemEntity> mediaFiles = [];
+  SortOption _sortOption = SortOption.name;
 
   @override
   void initState() {
@@ -29,6 +31,7 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
     final folderDir = Directory(widget.folderPath);
     setState(() {
       mediaFiles = folderDir.listSync().where((item) => item is File).toList();
+      _sortMediaFiles();
     });
   }
 
@@ -45,7 +48,7 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
                 title: Text('Chọn ảnh'),
                 onTap: () {
                   Navigator.of(context).pop();
-                  _pickMedia(isImage: true);
+                  _pickImages();
                 },
               ),
               ListTile(
@@ -53,7 +56,7 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
                 title: Text('Chọn video'),
                 onTap: () {
                   Navigator.of(context).pop();
-                  _pickMedia(isImage: false);
+                  _pickVideo();
                 },
               ),
             ],
@@ -63,11 +66,22 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
     );
   }
 
-  Future<void> _pickMedia({required bool isImage}) async {
+  Future<void> _pickImages() async {
     final ImagePicker _picker = ImagePicker();
-    final XFile? media = isImage
-        ? await _picker.pickImage(source: ImageSource.gallery)
-        : await _picker.pickVideo(source: ImageSource.gallery);
+    final List<XFile>? images = await _picker.pickMultiImage();
+
+    if (images != null) {
+      for (var image in images) {
+        final File newImage = File('${widget.folderPath}/${image.name}');
+        await File(image.path).copy(newImage.path);
+      }
+      _loadMediaFiles();
+    }
+  }
+
+  Future<void> _pickVideo() async {
+    final ImagePicker _picker = ImagePicker();
+    final XFile? media = await _picker.pickVideo(source: ImageSource.gallery);
 
     if (media != null) {
       final File newMedia = File('${widget.folderPath}/${media.name}');
@@ -90,11 +104,64 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
     }
   }
 
+  void _sortMediaFiles() {
+    switch (_sortOption) {
+      case SortOption.name:
+        mediaFiles.sort((a, b) => a.path.compareTo(b.path));
+        break;
+      case SortOption.date:
+        mediaFiles.sort((a, b) => File(a.path)
+            .lastModifiedSync()
+            .compareTo(File(b.path).lastModifiedSync()));
+        break;
+      case SortOption.size:
+        mediaFiles.sort((a, b) =>
+            File(a.path).lengthSync().compareTo(File(b.path).lengthSync()));
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(
-        title: 'Media in ${widget.folderPath.split('/').last}',
+      appBar: AppBar(
+        title: Text('Media in ${widget.folderPath.split('/').last}'),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.deepPurple,
+                Colors.white,
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          PopupMenuButton<SortOption>(
+            onSelected: (SortOption result) {
+              setState(() {
+                _sortOption = result;
+                _sortMediaFiles();
+              });
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<SortOption>>[
+              const PopupMenuItem<SortOption>(
+                value: SortOption.name,
+                child: Text('Sort by Name'),
+              ),
+              const PopupMenuItem<SortOption>(
+                value: SortOption.date,
+                child: Text('Sort by Date'),
+              ),
+              const PopupMenuItem<SortOption>(
+                value: SortOption.size,
+                child: Text('Sort by Size'),
+              ),
+            ],
+          ),
+        ],
       ),
       body: Container(
         padding: const EdgeInsets.all(8),

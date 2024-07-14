@@ -10,7 +10,12 @@ class CamouflageScreen extends StatefulWidget {
 
 class _CamouflageScreenState extends State<CamouflageScreen> {
   final TextEditingController _passwordController = TextEditingController();
-  final String _correctPassword = '1234'; // Bạn có thể thay đổi mật khẩu này
+  final String _correctPassword = '1234';
+
+  String displayText = '';
+  double num1 = 0;
+  double num2 = 0;
+  String operator = '';
 
   void _checkPassword() async {
     if (_passwordController.text == _correctPassword) {
@@ -42,11 +47,72 @@ class _CamouflageScreenState extends State<CamouflageScreen> {
     }
   }
 
+  void buttonPressed(String buttonText) {
+    if (buttonText == "C") {
+      displayText = '';
+      num1 = 0;
+      num2 = 0;
+      operator = '';
+    } else if (buttonText == "+" ||
+        buttonText == "-" ||
+        buttonText == "*" ||
+        buttonText == "/") {
+      num1 = double.parse(displayText);
+      operator = buttonText;
+      displayText = '';
+    } else if (buttonText == "=") {
+      num2 = double.parse(displayText);
+
+      if (operator == "+") {
+        displayText = (num1 + num2).toString();
+      } else if (operator == "-") {
+        displayText = (num1 - num2).toString();
+      } else if (operator == "*") {
+        displayText = (num1 * num2).toString();
+      } else if (operator == "/") {
+        displayText = (num1 / num2).toString();
+      }
+
+      num1 = 0;
+      num2 = 0;
+      operator = '';
+    } else {
+      displayText = displayText + buttonText;
+    }
+
+    setState(() {});
+  }
+
+  Widget buildButton(String buttonText) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.deepPurple.shade700,
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          child: Text(
+            buttonText,
+            style: const TextStyle(
+              fontSize: 24,
+              color: Colors.white,
+            ),
+          ),
+          onPressed: () => buttonPressed(buttonText),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Calculator'),
+        title: const Text('Calculator'),
         backgroundColor: Colors.deepPurple,
       ),
       body: Container(
@@ -61,12 +127,53 @@ class _CamouflageScreenState extends State<CamouflageScreen> {
         child: Column(
           children: [
             Expanded(
-              child: Center(
-                child: Icon(
-                  Icons.calculate,
-                  size: 100,
-                  color: Colors.white,
-                ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        displayText,
+                        style: const TextStyle(
+                          fontSize: 48,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      buildButton("7"),
+                      buildButton("8"),
+                      buildButton("9"),
+                      buildButton("/"),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      buildButton("4"),
+                      buildButton("5"),
+                      buildButton("6"),
+                      buildButton("*"),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      buildButton("1"),
+                      buildButton("2"),
+                      buildButton("3"),
+                      buildButton("-"),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      buildButton("0"),
+                      buildButton("C"),
+                      buildButton("="),
+                      buildButton("+"),
+                    ],
+                  ),
+                ],
               ),
             ),
             TextField(

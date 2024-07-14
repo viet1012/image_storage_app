@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'Common/Common.dart';
 import 'Common/CustomAppBar.dart';
+import 'Common/CustomElevatedButton.dart';
 import 'FolderContentScreen.dart';
 
 class FolderListScreen extends StatefulWidget {
@@ -90,17 +91,17 @@ class _FolderListScreenState extends State<FolderListScreen> {
             decoration: const InputDecoration(hintText: 'Password'),
           ),
           actions: [
-            TextButton(
+            CustomElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: const Text('Cancel'),
+              text: 'Cancel',
             ),
-            TextButton(
+            CustomElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop(_controller.text);
               },
-              child: const Text('OK'),
+              text: 'OK',
             ),
           ],
         );
@@ -184,7 +185,6 @@ class _FolderListScreenState extends State<FolderListScreen> {
                         context,
                         'Delete Folder',
                         'Are you sure you want to delete this folder?');
-
                     if (confirm == true) {
                       _deleteFolder(folderName);
                     }
@@ -247,32 +247,20 @@ class _FolderListScreenState extends State<FolderListScreen> {
             ),
           ),
           actions: [
-            TextButton(
+            CustomElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: const Text(
-                'Cancel',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
+              text: 'Cancel',
             ),
-            ElevatedButton(
+            CustomElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop([
                   _folderNameController.text,
                   _passwordController.text,
                 ]);
               },
-              child: const Text(
-                'Create',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
+              text: 'Create',
             ),
           ],
         );
