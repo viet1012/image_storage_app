@@ -176,6 +176,7 @@ class _CamouflageScreenState extends State<CamouflageScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 16),
             TextField(
               controller: _passwordController,
               decoration: InputDecoration(
@@ -199,7 +200,7 @@ class _CamouflageScreenState extends State<CamouflageScreen> {
               keyboardType: TextInputType.number,
               style: TextStyle(color: Colors.white),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _checkPassword,
               style: ElevatedButton.styleFrom(

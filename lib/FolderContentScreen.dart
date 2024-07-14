@@ -198,7 +198,9 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
                 child: GridTile(
                   footer: GridTileBar(
                     backgroundColor: Colors.black54,
-                    title: Text('Media ${index + 1}'),
+                    title: isVideo
+                        ? Text('VD ${index + 1}')
+                        : Text('IMG ${index + 1}'),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete),
                       onPressed: () {
