@@ -10,12 +10,25 @@ class CamouflageScreen extends StatefulWidget {
 
 class _CamouflageScreenState extends State<CamouflageScreen> {
   final TextEditingController _passwordController = TextEditingController();
-  final String _correctPassword = '1234';
+  String? _correctPassword;
 
   String displayText = '';
   double num1 = 0;
   double num2 = 0;
   String operator = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPassword();
+  }
+
+  Future<void> _loadPassword() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _correctPassword = prefs.getString('userPassword');
+    });
+  }
 
   void _checkPassword() async {
     if (_passwordController.text == _correctPassword) {

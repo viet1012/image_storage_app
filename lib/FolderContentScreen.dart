@@ -2,16 +2,18 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
 
 import 'Common/Common.dart';
+import 'Common/CustomElevatedButton.dart';
 import 'DetailScreen.dart';
 
 enum SortOption { name, date, size }
 
 class FolderContentScreen extends StatefulWidget {
   final String folderPath;
-  const FolderContentScreen({super.key, required this.folderPath});
+  FolderContentScreen({super.key, required this.folderPath});
 
   @override
   _FolderContentScreenState createState() => _FolderContentScreenState();
@@ -19,6 +21,8 @@ class FolderContentScreen extends StatefulWidget {
 
 class _FolderContentScreenState extends State<FolderContentScreen> {
   List<FileSystemEntity> mediaFiles = [];
+  Set<FileSystemEntity> selectedFiles = Set();
+
   SortOption _sortOption = SortOption.name;
 
   @override
@@ -76,6 +80,7 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
         await File(image.path).copy(newImage.path);
       }
       _loadMediaFiles();
+      _showSnackbar('Upload Complete');
     }
   }
 
@@ -87,6 +92,7 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
       final File newMedia = File('${widget.folderPath}/${media.name}');
       await File(media.path).copy(newMedia.path);
       _loadMediaFiles();
+      _showSnackbar('Upload Complete');
     }
   }
 
@@ -104,6 +110,54 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
     }
   }
 
+  void _toggleSelection(FileSystemEntity media) {
+    setState(() {
+      if (selectedFiles.contains(media)) {
+        selectedFiles.remove(media);
+      } else {
+        selectedFiles.add(media);
+      }
+    });
+  }
+
+  Future<List<String>> _getFolderPaths() async {
+    final directory = await getApplicationDocumentsDirectory();
+    final folderDir = Directory('${directory.path}/image_storage');
+    if (!await folderDir.exists()) {
+      await folderDir.create(recursive: true);
+    }
+    return folderDir
+        .listSync()
+        .where((item) => item is Directory)
+        .map((item) => item.path)
+        .toList();
+  }
+
+  void _moveMediaToFolder(FileSystemEntity media, String folderPath) async {
+    final fileName = media.path.split('/').last;
+    final newMediaPath = '$folderPath/$fileName';
+    try {
+      await File(media.path).rename(newMediaPath);
+      _loadMediaFiles();
+    } catch (e) {
+      print('Failed to move media: $e');
+    }
+  }
+
+  Future<void> _moveSelectedMedia(String folderPath) async {
+    for (var media in selectedFiles) {
+      final fileName = media.path.split('/').last;
+      final newMediaPath = '$folderPath/$fileName';
+      try {
+        await File(media.path).rename(newMediaPath);
+      } catch (e) {
+        print('Failed to move media: $e');
+      }
+    }
+    selectedFiles.clear();
+    _loadMediaFiles();
+  }
+
   void _sortMediaFiles() {
     switch (_sortOption) {
       case SortOption.name:
@@ -119,6 +173,17 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
             File(a.path).lengthSync().compareTo(File(b.path).lengthSync()));
         break;
     }
+  }
+
+  void _showSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.all(10.0),
+      ),
+    );
   }
 
   @override
@@ -139,6 +204,13 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
           ),
         ),
         actions: [
+          if (selectedFiles.isNotEmpty)
+            IconButton(
+              icon: Icon(Icons.drive_file_move),
+              onPressed: () {
+                _showMoveDialog(context);
+              },
+            ),
           PopupMenuButton<SortOption>(
             onSelected: (SortOption result) {
               setState(() {
@@ -193,42 +265,75 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
                   ),
                 );
               },
+              onLongPress: () {
+                _toggleSelection(media);
+              },
               child: Hero(
                 tag: media.path,
-                child: GridTile(
-                  footer: GridTileBar(
-                    backgroundColor: Colors.black54,
-                    title: isVideo
-                        ? Text('VD ${index + 1}')
-                        : Text('IMG ${index + 1}'),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete),
-                      onPressed: () {
-                        _deleteMedia(media.path);
-                      },
-                      color: Colors.white,
-                    ),
-                  ),
-                  child: isVideo
-                      ? FutureBuilder<VideoPlayerController>(
-                          future: _initializeVideoPlayer(media.path),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.done) {
-                              return AspectRatio(
-                                aspectRatio: snapshot.data!.value.aspectRatio,
-                                child: VideoPlayer(snapshot.data!),
-                              );
-                            } else {
-                              return const Center(
-                                  child: CircularProgressIndicator());
-                            }
+                child: Stack(
+                  children: [
+                    GridTile(
+                      footer: GridTileBar(
+                        backgroundColor: Colors.black54,
+                        title: isVideo
+                            ? Text(
+                                'VD ${index + 1}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              )
+                            : Text(
+                                'IMG ${index + 1}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete),
+                          onPressed: () {
+                            _deleteMedia(media.path);
                           },
-                        )
-                      : Image.file(
-                          File(media.path),
-                          fit: BoxFit.cover,
+                          color: Colors.white,
                         ),
+                      ),
+                      child: isVideo
+                          ? FutureBuilder<VideoPlayerController>(
+                              future: _initializeVideoPlayer(media.path),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.done) {
+                                  return AspectRatio(
+                                    aspectRatio:
+                                        snapshot.data!.value.aspectRatio,
+                                    child: VideoPlayer(snapshot.data!),
+                                  );
+                                } else {
+                                  return Center(
+                                    child: CircularProgressIndicator(),
+                                  );
+                                }
+                              },
+                            )
+                          : Image.file(
+                              File(media.path),
+                              fit: BoxFit.cover,
+                            ),
+                    ),
+                    selectedFiles.contains(media)
+                        ? Positioned.fill(
+                            child: Align(
+                              alignment: Alignment.center,
+                              child: Container(
+                                width: 30,
+                                height: 30,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.green,
+                                ),
+                                child: Icon(Icons.check, color: Colors.white),
+                              ),
+                            ),
+                          )
+                        : const SizedBox()
+                  ],
                 ),
               ),
             );
@@ -246,5 +351,109 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
     final controller = VideoPlayerController.file(File(path));
     await controller.initialize();
     return controller;
+  }
+
+  void _showMoveDialog(BuildContext context) async {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8.0),
+          ),
+          child: SizedBox(
+            width: MediaQuery.of(context).size.width * 0.8,
+            height: MediaQuery.of(context).size.height * 0.6,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Text(
+                    'Move Selected Media',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4.0),
+                    child: FutureBuilder<List<String>>(
+                      future: _getFolderPaths(),
+                      builder: (BuildContext context,
+                          AsyncSnapshot<List<String>> snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                              child: CircularProgressIndicator());
+                        } else if (snapshot.hasError) {
+                          return Center(
+                              child: Text('Error: ${snapshot.error}'));
+                        } else if (!snapshot.hasData ||
+                            snapshot.data!.isEmpty) {
+                          return const Center(child: Text('No folders found'));
+                        } else {
+                          return GridView.builder(
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              crossAxisSpacing: 4.0,
+                              mainAxisSpacing: 4.0,
+                            ),
+                            itemCount: snapshot.data!.length,
+                            itemBuilder: (context, index) {
+                              final folderPath = snapshot.data![index];
+                              final folderName = folderPath.split('/').last;
+                              return GestureDetector(
+                                onTap: () {
+                                  Navigator.pop(context, folderPath);
+                                },
+                                child: Card(
+                                  color: Colors.deepPurple.shade200,
+                                  child: Center(
+                                    child: Text(
+                                      folderName,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 20,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      CustomElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        text: 'Cancel',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (result != null) {
+      _moveSelectedMedia(result);
+    }
   }
 }

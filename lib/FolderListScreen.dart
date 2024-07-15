@@ -61,7 +61,7 @@ class _FolderListScreenState extends State<FolderListScreen> {
 
   Future<void> _checkPassword(String folderName) async {
     final password = await _getPassword(folderName);
-    print("password: ${password}");
+    print("password: $password");
     if (password != null) {
       final enteredPassword = await _displayPasswordDialog();
       if (enteredPassword == null) {
@@ -109,6 +109,24 @@ class _FolderListScreenState extends State<FolderListScreen> {
     );
   }
 
+  Future<void> _renameFolder(String oldFolderName, String newFolderName) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final oldFolderDir =
+        Directory('${directory.path}/image_storage/$oldFolderName');
+    final newFolderDir =
+        Directory('${directory.path}/image_storage/$newFolderName');
+
+    if (await oldFolderDir.exists() && !await newFolderDir.exists()) {
+      await oldFolderDir.rename(newFolderDir.path);
+      final password = await _getPassword(oldFolderName);
+      if (password != null) {
+        await _setPassword(newFolderName, password);
+        await _removePassword(oldFolderName);
+      }
+      _loadFolders();
+    }
+  }
+
   Future<void> _setPassword(String folderName, String password) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('password_$folderName', password);
@@ -150,50 +168,80 @@ class _FolderListScreenState extends State<FolderListScreen> {
             colors: [Colors.deepPurple.shade900, Colors.deepPurple.shade400],
           ),
         ),
-        child: ListView.builder(
-          itemCount: folders.length,
-          itemBuilder: (context, index) {
-            final folderPath = folders[index];
-            final folderName = folderPath.split('/').last;
-            return Card(
-              elevation: 2,
-              color: Colors.white12,
-              margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-                side: BorderSide(color: Colors.grey.shade300, width: 2),
-              ),
-              child: ListTile(
-                title: Text(
-                  folderName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
+        child: folders.isEmpty
+            ? const Center(
+                child: Text(
+                  'No folders found',
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 22,
+                    fontSize: 18,
                   ),
                 ),
-                onTap: () async {
-                  await _checkPassword(folderName);
+              )
+            : ListView.builder(
+                itemCount: folders.length,
+                itemBuilder: (context, index) {
+                  final folderPath = folders[index];
+                  final folderName = folderPath.split('/').last;
+                  return Card(
+                    elevation: 2,
+                    color: Colors.white12,
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      side: BorderSide(color: Colors.grey.shade300, width: 2),
+                    ),
+                    child: ListTile(
+                      title: Text(
+                        folderName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontSize: 22,
+                        ),
+                      ),
+                      onTap: () async {
+                        await _checkPassword(folderName);
+                      },
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.edit,
+                              color: Colors.white,
+                            ),
+                            onPressed: () async {
+                              final newName =
+                                  await _displayRenameDialog(folderName);
+                              if (newName != null && newName.isNotEmpty) {
+                                await _renameFolder(folderName, newName);
+                              }
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.delete,
+                              color: Colors.white,
+                            ),
+                            onPressed: () async {
+                              final confirm =
+                                  await Dialogs.showDeleteConfirmationDialog(
+                                      context,
+                                      'Delete Folder',
+                                      'Are you sure you want to delete this folder?');
+                              if (confirm == true) {
+                                _deleteFolder(folderName);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
                 },
-                trailing: IconButton(
-                  icon: const Icon(
-                    Icons.delete,
-                    color: Colors.white,
-                  ),
-                  onPressed: () async {
-                    final confirm = await Dialogs.showDeleteConfirmationDialog(
-                        context,
-                        'Delete Folder',
-                        'Are you sure you want to delete this folder?');
-                    if (confirm == true) {
-                      _deleteFolder(folderName);
-                    }
-                  },
-                ),
               ),
-            );
-          },
-        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
@@ -204,6 +252,39 @@ class _FolderListScreenState extends State<FolderListScreen> {
         },
         child: const Icon(Icons.add),
       ),
+    );
+  }
+
+  Future<String?> _displayRenameDialog(String oldFolderName) async {
+    TextEditingController _controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text(
+            'Rename Folder',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: TextField(
+            controller: _controller,
+            decoration: const InputDecoration(hintText: 'New Folder Name'),
+          ),
+          actions: [
+            CustomElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              text: 'Cancel',
+            ),
+            CustomElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop(_controller.text);
+              },
+              text: 'OK',
+            ),
+          ],
+        );
+      },
     );
   }
 
