@@ -142,6 +142,47 @@ class _FolderListScreenState extends State<FolderListScreen> {
     return prefs.getString('password_$folderName');
   }
 
+  Future<void> _changePassword(String folderName) async {
+    final newPassword = await _displayNewPasswordDialog();
+    if (newPassword != null && newPassword.isNotEmpty) {
+      await _setPassword(folderName, newPassword);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password changed successfully')),
+      );
+    }
+  }
+
+  Future<String?> _displayNewPasswordDialog() async {
+    TextEditingController _controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Enter New Password'),
+          content: TextField(
+            controller: _controller,
+            obscureText: true,
+            decoration: const InputDecoration(hintText: 'New Password'),
+          ),
+          actions: [
+            CustomElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              text: 'Cancel',
+            ),
+            CustomElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop(_controller.text);
+              },
+              text: 'OK',
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _navigateToFolderContent(String folderName) {
     final folderPath =
         folders.firstWhere((folder) => folder.split('/').last == folderName);
@@ -206,7 +247,17 @@ class _FolderListScreenState extends State<FolderListScreen> {
                       },
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.lock,
+                              color: Colors.white,
+                            ),
+                            onPressed: () async {
+                              await _changePassword(folderName);
+                            },
+                          ),
                           IconButton(
                             icon: const Icon(
                               Icons.edit,

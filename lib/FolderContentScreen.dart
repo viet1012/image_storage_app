@@ -133,17 +133,6 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
         .toList();
   }
 
-  void _moveMediaToFolder(FileSystemEntity media, String folderPath) async {
-    final fileName = media.path.split('/').last;
-    final newMediaPath = '$folderPath/$fileName';
-    try {
-      await File(media.path).rename(newMediaPath);
-      _loadMediaFiles();
-    } catch (e) {
-      print('Failed to move media: $e');
-    }
-  }
-
   Future<void> _moveSelectedMedia(String folderPath) async {
     for (var media in selectedFiles) {
       final fileName = media.path.split('/').last;
@@ -306,7 +295,7 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
                                     child: VideoPlayer(snapshot.data!),
                                   );
                                 } else {
-                                  return Center(
+                                  return const Center(
                                     child: CircularProgressIndicator(),
                                   );
                                 }
@@ -324,11 +313,12 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
                               child: Container(
                                 width: 30,
                                 height: 30,
-                                decoration: BoxDecoration(
+                                decoration: const BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: Colors.green,
                                 ),
-                                child: Icon(Icons.check, color: Colors.white),
+                                child: const Icon(Icons.check,
+                                    color: Colors.white),
                               ),
                             ),
                           )
