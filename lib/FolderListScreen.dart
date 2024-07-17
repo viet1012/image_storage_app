@@ -16,6 +16,7 @@ class FolderListScreen extends StatefulWidget {
 
 class _FolderListScreenState extends State<FolderListScreen> {
   List<String> folders = [];
+  List<bool> isCircle = []; // List to store circle shape states
 
   @override
   void initState() {
@@ -35,6 +36,7 @@ class _FolderListScreenState extends State<FolderListScreen> {
           .where((item) => item is Directory)
           .map((item) => item.path)
           .toList();
+      isCircle = List.generate(folders.length, (index) => true);
     });
   }
 
@@ -152,6 +154,15 @@ class _FolderListScreenState extends State<FolderListScreen> {
     }
   }
 
+  String convertToInitials(String fullName) {
+    String initials = '';
+    List<String> nameParts = fullName.split(' ');
+    for (var item in nameParts) {
+      if (item.isNotEmpty) initials += item[0];
+    }
+    return initials.toUpperCase();
+  }
+
   Future<String?> _displayNewPasswordDialog() async {
     TextEditingController _controller = TextEditingController();
     return showDialog<String>(
@@ -194,6 +205,13 @@ class _FolderListScreenState extends State<FolderListScreen> {
     );
   }
 
+  void _toggleShape(int index) {
+    setState(() {
+      isCircle[index] =
+          !isCircle[index]; // Toggle the state of the selected item
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -230,66 +248,110 @@ class _FolderListScreenState extends State<FolderListScreen> {
                     margin:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: isCircle[index]
+                          ? BorderRadius.circular(200)
+                          : BorderRadius.circular(10),
                       side: BorderSide(color: Colors.grey.shade300, width: 2),
                     ),
-                    child: ListTile(
-                      title: Text(
-                        folderName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          fontSize: 22,
-                        ),
-                      ),
-                      onTap: () async {
-                        await _checkPassword(folderName);
-                      },
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          IconButton(
-                            icon: const Icon(
-                              Icons.lock,
-                              color: Colors.white,
+
+                    // ĐANG SỬA Ở ĐÂY
+                    child: isCircle[index]
+                        ? Padding(
+                            padding: const EdgeInsets.all(4.0),
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.translucent,
+                              onTap: () => _toggleShape(index),
+                              child: Container(
+                                height: 50,
+                                width: 50,
+                                decoration: const BoxDecoration(
+                                  color: Colors.deepPurpleAccent,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    convertToInitials(folderName),
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
-                            onPressed: () async {
-                              await _changePassword(folderName);
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.edit,
-                              color: Colors.white,
+                          )
+                        : ListTile(
+                            title: GestureDetector(
+                              onTap: () => _toggleShape(index),
+                              child: Container(
+                                decoration: const BoxDecoration(
+                                  color: Colors.deepPurpleAccent,
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: Radius.circular(30),
+                                    bottomRight: Radius.circular(30),
+                                  ),
+                                ),
+                                child: Text(
+                                  textAlign: TextAlign.center,
+                                  folderName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    fontSize: 22,
+                                  ),
+                                ),
+                              ),
                             ),
-                            onPressed: () async {
-                              final newName =
-                                  await _displayRenameDialog(folderName);
-                              if (newName != null && newName.isNotEmpty) {
-                                await _renameFolder(folderName, newName);
-                              }
+                            onTap: () async {
+                              await _checkPassword(folderName);
                             },
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.delete,
-                              color: Colors.white,
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.lock,
+                                    color: Colors.white,
+                                  ),
+                                  onPressed: () async {
+                                    await _changePassword(folderName);
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: Colors.white,
+                                  ),
+                                  onPressed: () async {
+                                    final newName =
+                                        await _displayRenameDialog(folderName);
+                                    if (newName != null && newName.isNotEmpty) {
+                                      await _renameFolder(folderName, newName);
+                                    }
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete,
+                                    color: Colors.white,
+                                  ),
+                                  onPressed: () async {
+                                    final confirm = await Dialogs
+                                        .showDeleteConfirmationDialog(
+                                            context,
+                                            'Delete Folder',
+                                            'Are you sure you want to delete this folder?');
+                                    if (confirm == true) {
+                                      _deleteFolder(folderName);
+                                    }
+                                  },
+                                ),
+                              ],
                             ),
-                            onPressed: () async {
-                              final confirm =
-                                  await Dialogs.showDeleteConfirmationDialog(
-                                      context,
-                                      'Delete Folder',
-                                      'Are you sure you want to delete this folder?');
-                              if (confirm == true) {
-                                _deleteFolder(folderName);
-                              }
-                            },
                           ),
-                        ],
-                      ),
-                    ),
                   );
                 },
               ),
