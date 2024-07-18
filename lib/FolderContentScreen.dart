@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:gallery_saver/gallery_saver.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
@@ -21,15 +23,79 @@ class FolderContentScreen extends StatefulWidget {
 
 class _FolderContentScreenState extends State<FolderContentScreen> {
   List<FileSystemEntity> mediaFiles = [];
-  Set<FileSystemEntity> selectedFiles = Set();
+  Set<FileSystemEntity> selectedFiles = {};
 
   SortOption _sortOption = SortOption.name;
 
   @override
   void initState() {
     super.initState();
+    _initializeNotifications();
     _loadMediaFiles();
   }
+
+  // Notification
+  FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+
+  Future<void> _initializeNotifications() async {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    final InitializationSettings initializationSettings =
+        InitializationSettings(
+      android: initializationSettingsAndroid,
+    );
+
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  }
+
+  Future<void> _showProgressNotification(int progress, int maxProgress) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'upload_channel',
+      'Upload Progress',
+      importance: Importance.low,
+      priority: Priority.low,
+      onlyAlertOnce: true,
+      showProgress: true,
+      maxProgress: 100,
+      progress: 0,
+    );
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+    );
+    await flutterLocalNotificationsPlugin.show(
+      0,
+      'Uploading Media',
+      '$progress% complete',
+      platformChannelSpecifics,
+      payload: 'upload_progress',
+    );
+  }
+
+  Future<void> _updateProgressNotification(
+      int progress, int maxProgress) async {
+    await flutterLocalNotificationsPlugin.show(
+      0,
+      'Uploading Media',
+      '$progress% complete',
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          'upload_channel',
+          'Upload Progress',
+          importance: Importance.low,
+          priority: Priority.low,
+          onlyAlertOnce: true,
+          showProgress: true,
+          maxProgress: maxProgress,
+          progress: progress,
+        ),
+      ),
+      payload: 'upload_progress',
+    );
+  }
+//////////////////////////////////////////////////////////////////////////////////////
 
   Future<void> _loadMediaFiles() async {
     final folderDir = Directory(widget.folderPath);
@@ -48,16 +114,16 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: Icon(Icons.photo),
-                title: Text('Chọn ảnh'),
+                leading: const Icon(Icons.photo),
+                title: const Text('Chọn ảnh'),
                 onTap: () {
                   Navigator.of(context).pop();
                   _pickImages();
                 },
               ),
               ListTile(
-                leading: Icon(Icons.video_library),
-                title: Text('Chọn video'),
+                leading: const Icon(Icons.video_library),
+                title: const Text('Chọn video'),
                 onTap: () {
                   Navigator.of(context).pop();
                   _pickVideo();
@@ -70,7 +136,7 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
     );
   }
 
-  Future<void> _pickImages() async {
+  Future<void> _pickImages1() async {
     final ImagePicker _picker = ImagePicker();
     final List<XFile>? images = await _picker.pickMultiImage();
 
@@ -84,25 +150,97 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
     }
   }
 
-  Future<void> _pickVideo() async {
+  Future<void> _pickImages() async {
     final ImagePicker _picker = ImagePicker();
-    final XFile? media = await _picker.pickVideo(source: ImageSource.gallery);
+    final List<XFile>? images = await _picker.pickMultiImage();
 
-    if (media != null) {
-      final File newMedia = File('${widget.folderPath}/${media.name}');
-      await File(media.path).copy(newMedia.path);
+    if (images != null) {
+      await _showProgressNotification(0, 100);
+      int progress = 0;
+      int totalImages = images.length;
+      for (var i = 0; i < totalImages; i++) {
+        final image = images[i];
+        final File newImage = File('${widget.folderPath}/${image.name}');
+        await File(image.path).copy(newImage.path);
+        progress = ((i + 1) / totalImages * 100).toInt();
+        await _updateProgressNotification(progress, 100);
+      }
+      await flutterLocalNotificationsPlugin.cancel(0);
       _loadMediaFiles();
       _showSnackbar('Upload Complete');
     }
   }
 
-  Future<void> _deleteMedia(String mediaPath) async {
-    final shouldDelete = await Dialogs.showDeleteConfirmationDialog(
-        context, 'Delete Media', 'Are you sure you want to delete this media?');
+  Future<void> _pickVideo() async {
+    final ImagePicker _picker = ImagePicker();
+    final XFile? media = await _picker.pickVideo(source: ImageSource.gallery);
+
+    if (media != null) {
+      await _showProgressNotification(0, 100);
+      final File newMedia = File('${widget.folderPath}/${media.name}');
+      await File(media.path).copy(newMedia.path);
+      _loadMediaFiles();
+      _showSnackbar('Upload Complete');
+      await flutterLocalNotificationsPlugin.cancel(0);
+    }
+  }
+
+  // SỬA Ở ĐÂY
+  Future<void> _pickVideoWithNoti() async {
+    final ImagePicker _picker = ImagePicker();
+    final XFile? media = await _picker.pickVideo(source: ImageSource.gallery);
+
+    if (media != null) {
+      final File newMedia = File('${widget.folderPath}/${media.name}');
+      final int totalBytes = await File(media.path).length();
+      int uploadedBytes = 0;
+      final int maxProgress = 100;
+
+      // Show initial progress notification
+      await _showProgressNotification(0, maxProgress);
+
+      try {
+        final HttpClient client = HttpClient();
+        final HttpClientRequest request =
+            await client.putUrl(Uri.parse('your_upload_url_here'));
+        request.headers.contentType = ContentType('video', 'mp4');
+
+        final Stream<List<int>> stream = File(media.path).openRead();
+        await for (final List<int> chunk in stream) {
+          request.add(chunk);
+          uploadedBytes += chunk.length;
+          final int progress =
+              ((uploadedBytes / totalBytes) * maxProgress).toInt();
+          await _updateProgressNotification(progress, maxProgress);
+        }
+
+        final HttpClientResponse response = await request.close();
+        // Handle server response if needed
+
+        // Upload complete, cancel progress notification
+        await flutterLocalNotificationsPlugin.cancel(0);
+        _loadMediaFiles();
+        _showSnackbar('Upload Complete');
+      } catch (e) {
+        print('Error uploading video: $e');
+        // Handle error if upload fails
+        // Cancel progress notification on error
+        await flutterLocalNotificationsPlugin.cancel(0);
+        _showSnackbar('Upload Failed');
+      }
+    }
+  }
+
+  Future<void> _deleteSelectedMedia() async {
+    final shouldDelete = await Dialogs.showDeleteConfirmationDialog(context,
+        'Delete Media', 'Are you sure you want to delete selected media?');
     if (shouldDelete == true) {
       try {
-        final file = File(mediaPath);
-        await file.delete();
+        for (var media in selectedFiles) {
+          final file = File(media.path);
+          await file.delete();
+        }
+        selectedFiles.clear();
         _loadMediaFiles();
       } catch (e) {
         print('Failed to delete media: $e');
@@ -164,13 +302,28 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
     }
   }
 
+  Future<void> _saveMediaToGallery(String mediaPath) async {
+    try {
+      final isVideo = mediaPath.endsWith('.mp4');
+      if (isVideo) {
+        await GallerySaver.saveVideo(mediaPath);
+      } else {
+        await GallerySaver.saveImage(mediaPath);
+      }
+      _showSnackbar('Download Complete');
+    } catch (e) {
+      print(e);
+      _showSnackbar('Failed to save media: $e');
+    }
+  }
+
   void _showSnackbar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.green,
         behavior: SnackBarBehavior.floating,
-        margin: EdgeInsets.all(10.0),
+        margin: const EdgeInsets.all(10.0),
       ),
     );
   }
@@ -193,13 +346,18 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
           ),
         ),
         actions: [
-          if (selectedFiles.isNotEmpty)
+          if (selectedFiles.isNotEmpty) ...[
             IconButton(
-              icon: Icon(Icons.drive_file_move),
+              icon: const Icon(Icons.drive_file_move),
               onPressed: () {
                 _showMoveDialog(context);
               },
             ),
+            IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: _deleteSelectedMedia,
+            ),
+          ],
           PopupMenuButton<SortOption>(
             onSelected: (SortOption result) {
               setState(() {
@@ -275,12 +433,18 @@ class _FolderContentScreenState extends State<FolderContentScreen> {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () {
-                            _deleteMedia(media.path);
-                          },
-                          color: Colors.white,
+                        trailing: Wrap(
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.download,
+                              ),
+                              onPressed: () {
+                                _saveMediaToGallery(media.path);
+                              },
+                              color: Colors.white,
+                            ),
+                          ],
                         ),
                       ),
                       child: isVideo

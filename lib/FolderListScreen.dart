@@ -224,6 +224,7 @@ class _FolderListScreenState extends State<FolderListScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
+            // colors: [Colors.black,Colors.white70]
             colors: [Colors.deepPurple.shade900, Colors.deepPurple.shade400],
           ),
         ),
@@ -249,41 +250,41 @@ class _FolderListScreenState extends State<FolderListScreen> {
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     shape: RoundedRectangleBorder(
                       borderRadius: isCircle[index]
-                          ? BorderRadius.circular(200)
+                          ? BorderRadius.circular(100)
                           : BorderRadius.circular(10),
                       side: BorderSide(color: Colors.grey.shade300, width: 2),
                     ),
-
-                    // ĐANG SỬA Ở ĐÂY
                     child: isCircle[index]
                         ? Padding(
                             padding: const EdgeInsets.all(4.0),
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.translucent,
-                              onTap: () => _toggleShape(index),
-                              child: Container(
-                                height: 50,
-                                width: 50,
-                                decoration: const BoxDecoration(
-                                  color: Colors.deepPurpleAccent,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Center(
-                                  child: FittedBox(
-                                    fit: BoxFit.contain,
-                                    child: Text(
-                                      convertToInitials(folderName),
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                        fontSize: 18,
+                            child: Column(
+                              children: [
+                                GestureDetector(
+                                  behavior: HitTestBehavior.translucent,
+                                  onTap: () => _toggleShape(index),
+                                  child: Container(
+                                    height: 50,
+                                    width: 50,
+                                    padding: const EdgeInsets.all(4.0),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.deepPurpleAccent,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        convertToInitials(folderName),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                          fontSize: 18,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
+                              ],
                             ),
                           )
                         : ListTile(
@@ -303,7 +304,7 @@ class _FolderListScreenState extends State<FolderListScreen> {
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
-                                    fontSize: 18,
+                                    fontSize: 20,
                                   ),
                                 ),
                               ),

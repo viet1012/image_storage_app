@@ -54,6 +54,8 @@ dev_dependencies:
   multiple_images_picker: ^1.0.1
   flutter_colorpicker: ^1.0.3
   file_picker: ^5.0.0
+  gallery_saver: ^2.3.2
+  flutter_local_notifications: ^12.0.0
 flutter_icons:
   image_path: "assets/images/iconV.jpg"
   android: true
